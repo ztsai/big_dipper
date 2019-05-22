@@ -2,6 +2,20 @@ import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
 
 Meteor.methods({
+    'accounts.getAccountDetail': function(address){
+        this.unblock();
+        let url = LCD + '/auth/accounts/'+ address;
+        try{
+            let available = HTTP.get(url);
+            if (available.statusCode == 200){
+                let response = JSON.parse(available.content);
+                return response.value;
+            }
+        }
+        catch (e){
+            console.log(e)
+        }
+    },
     'accounts.getBalance': function(address){
         this.unblock();
         let balance = {}
@@ -68,9 +82,9 @@ Meteor.methods({
                     delegations.forEach((delegation, i) => {
                         if (delegations[i] && delegations[i].shares)
                             delegations[i].shares = parseFloat(delegations[i].shares);
-                    })    
+                    })
                 }
-                
+
                 return delegations;
             };
         }
