@@ -7,7 +7,6 @@ import { Container } from 'reactstrap';
 import Header from '/imports/ui/components/Header.jsx';
 import Footer from '/imports/ui/components/Footer.jsx';
 import Home from '/imports/ui/home/Home.jsx';
-import Test from '/imports/ui/test.jsx';
 import Validators from '/imports/ui/validators/ValidatorsList.jsx';
 import Account from '/imports/ui/accounts/Account.jsx';
 import BlocksTable from '/imports/ui/blocks/BlocksTable.jsx';
@@ -19,6 +18,7 @@ import SearchBar from '/imports/ui/components/SearchBar.jsx';
 import moment from 'moment';
 import SentryBoundary from '/imports/ui/components/SentryBoundary.jsx';
 import NotFound from '/imports/ui/pages/NotFound.jsx';
+import {Ledger} from '/imports/ui/ledger/ledger.js';
 
 import { ToastContainer, toast } from 'react-toastify';
 
@@ -27,7 +27,7 @@ if (Meteor.isClient)
 
 // import './App.js'
 
-const RouteHeader = withRouter( ({history}) => <Header history={history}/>)
+const RouteHeader = withRouter( ({history, ledger}) => <Header history={history} ledger={ledger}/>)
 const MobileSearchBar = withRouter( ({history}) => <SearchBar history={history} id="mobile-searchbar" mobile />)
 
 function getLang () {
@@ -43,6 +43,7 @@ function getLang () {
 class App extends Component {
     constructor(props){
         super(props);
+        this.ledger = new Ledger({testModeAllowed: false});
     }
 
     componentDidMount(){
@@ -73,14 +74,13 @@ class App extends Component {
             // <Router history={history}>
                 <div>
                     {(Meteor.settings.public.gtm)?<GoogleTagManager gtmId={Meteor.settings.public.gtm} />:''}
-                    <RouteHeader />
+                    <RouteHeader ledger={this.ledger} />
                     <Container fluid id="main">
                         <ToastContainer />
                         <SentryBoundary>
                             <MobileSearchBar />
                             <Switch>
                                 <Route exact path="/" component={Home} />
-                                <Route path="/test" component={Test} />
                                 <Route path="/blocks" component={BlocksTable} />
                                 <Route path="/transactions" component={Transactions} />
                                 <Route path="/account/:address" render={(props)=><Account {...props} />} />

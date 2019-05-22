@@ -8,78 +8,15 @@ import secp256k1 from "secp256k1";
 import sha256 from "crypto-js/sha256"
 import ripemd160 from "crypto-js/ripemd160"
 import CryptoJS from "crypto-js"
-import TransportWebAuthn from "@ledgerhq/hw-transport-webauthn";
-import TransportU2F from "@ledgerhq/hw-transport-u2f";
-
-import regeneratorRuntime from 'regenerator-runtime/runtime';
-window.regeneratorRuntime = regeneratorRuntime;
 
 // TODO: discuss TIMEOUT value
 const INTERACTION_TIMEOUT = 12000000 // seconds to wait for user action on Ledger, currently is always limited to 60
 const REQUIRED_COSMOS_APP_VERSION = "1.5.0"
-//const REQUIRED_LEDGER_FIRMWARE = "1.1.1"
 
 /*
 HD wallet derivation path (BIP44)
 DerivationPath{44, 118, account, 0, index}
 */
-
-const CLA = 0x55;
-const INS_GET_VERSION = 0x00;
-const INS_PUBLIC_KEY_SECP256K1 = 0x01;
-const INS_SIGN_SECP256K1 = 0x02;
-const INS_SHOW_ADDR_SECP256K1 = 0x03;
-const INS_GET_ADDR_SECP256K1 = 0x04;
-
-function errorMessage(error_code) {
-    switch (error_code) {
-        case 1:
-            return "U2F: Unknown";
-        case 2:
-            return "U2F: Bad request";
-        case 3:
-            return "U2F: Configuration unsupported";
-        case 4:
-            return "U2F: Device Ineligible";
-        case 5:
-            return "U2F: Timeout";
-        case 14:
-            return "Timeout";
-        case 0x9000:
-            return "No errors";
-        case 0x9001:
-            return "Device is busy";
-        case 0x6400:
-            return "Execution Error";
-        case 0x6700:
-            return "Wrong Length";
-        case 0x6982:
-            return "Empty Buffer";
-        case 0x6983:
-            return "Output buffer too small";
-        case 0x6984:
-            return "Data is invalid";
-        case 0x6985:
-            return "Conditions not satisfied";
-        case 0x6986:
-            return "Transaction rejected";
-        case 0x6A80:
-            return "Bad key handle";
-        case 0x6B00:
-            return "Invalid P1/P2";
-        case 0x6D00:
-            return "Instruction not supported";
-        case 0x6E00:
-            return "Cosmos app does not seem to be open";
-        case 0x6F00:
-            return "Unknown error";
-        case 0x6F01:
-            return "Sign/verify error";
-        default:
-            return "Unknown error code";
-    }
-}
-
 
 const HDPATH = [44, 118, 0, 0, 0]
 const BECH32PREFIX = `cosmos`
@@ -96,31 +33,6 @@ function createCosmosAddress(publicKey) {
   const cosmosAddress = bech32ify(address, `cosmos`)
 
   return cosmosAddress
-}
-
-export class MyLedger {
-  async open() {
-    this.transport = await TransportU2F.open()
-    this.transport.setScrambleKey('CSM');
-//    this.app = new App(this.transport);
-  }
-  async getVersion() {
-    return await this.transport.send(CLA, INS_GET_VERSION, 0x0, 0x0,).then((res) => {
-            var result = {};
-            let apduResponse = Buffer.from(res, 'hex');
-            let error_code_data = apduResponse.slice(-2);
-
-            result["test_mode"] = apduResponse[0] !== 0;
-            result["major"] = apduResponse[1];
-            result["minor"] = apduResponse[2];
-            result["patch"] = apduResponse[3];
-            result["device_locked"] = apduResponse[4] === 1;
-
-            result["return_code"] = error_code_data[0] * 256 + error_code_data[1];
-            result["error_message"] = errorMessage(result["return_code"]);
-            return result;
-    })
-  }
 }
 
 export class Ledger {

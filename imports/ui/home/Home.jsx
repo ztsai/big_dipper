@@ -6,19 +6,10 @@ import TopValidators from './TopValidatorsContainer.js';
 import Chart from './ChartContainer.js';
 import ChainStates from '../components/ChainStatesContainer.js'
 import { Helmet } from "react-helmet";
-import Ledger from '/imports/ui/ledger.js';
 
 export default class Home extends Component{
     constructor(props){
         super(props);
-    }
-
-    componentDidMount(){
-        let ledger = new Ledger({testModeAllowed: true});
-        ledger.connect().then((res) => {
-            console.log(res);
-        });
-        let ledgernode = Meteor.call('ledger.connect');
     }
 
     render() {

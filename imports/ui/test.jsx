@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Ledger, MyLedger} from '/imports/ui/ledger.js';
+import {Ledger, MyLedger} from '/imports/ui/ledger/ledger.js';
 
 export default class Test extends Component{
 	constructor(props){
