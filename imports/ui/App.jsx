@@ -7,6 +7,7 @@ import { Container } from 'reactstrap';
 import Header from '/imports/ui/components/Header.jsx';
 import Footer from '/imports/ui/components/Footer.jsx';
 import Home from '/imports/ui/home/Home.jsx';
+import Test from '/imports/ui/test.jsx';
 import Validators from '/imports/ui/validators/ValidatorsList.jsx';
 import Account from '/imports/ui/accounts/Account.jsx';
 import BlocksTable from '/imports/ui/blocks/BlocksTable.jsx';
@@ -60,7 +61,7 @@ class App extends Component {
             i18n.setLocale('zh-Hans');
         }
         else{
-            i18n.setLocale(lang);  
+            i18n.setLocale(lang);
         }
 
     }
@@ -79,6 +80,7 @@ class App extends Component {
                             <MobileSearchBar />
                             <Switch>
                                 <Route exact path="/" component={Home} />
+                                <Route path="/test" component={Test} />
                                 <Route path="/blocks" component={BlocksTable} />
                                 <Route path="/transactions" component={Transactions} />
                                 <Route path="/account/:address" render={(props)=><Account {...props} />} />
