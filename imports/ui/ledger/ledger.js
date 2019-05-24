@@ -10,7 +10,7 @@ import ripemd160 from "crypto-js/ripemd160"
 import CryptoJS from "crypto-js"
 
 // TODO: discuss TIMEOUT value
-const INTERACTION_TIMEOUT = 12000000 // seconds to wait for user action on Ledger, currently is always limited to 60
+const INTERACTION_TIMEOUT = 120000 // seconds to wait for user action on Ledger, currently is always limited to 60
 const REQUIRED_COSMOS_APP_VERSION = "1.5.0"
 
 /*

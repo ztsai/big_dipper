@@ -15,6 +15,8 @@ import {
     // InputGroupAddon,
     // Button,
     UncontrolledDropdown,
+    UncontrolledPopover,
+    PopoverBody,
     DropdownToggle,
     DropdownMenu,
     DropdownItem
@@ -85,7 +87,13 @@ export default class Header extends Component {
         }
     }
 
+    signOut () {
+        localStorage.removeItem('address');
+        this.forceUpdate();
+    }
+
     render() {
+        let signedInAddress = localStorage.getItem('address');
         return (
             <Navbar color="primary" dark expand="lg" fixed="top" id="header">
                 <NavbarBrand tag={Link} to="/"><img src="/img/big-dipper.svg" className="img-fluid logo"/> <span className="d-none d-xl-inline-block"><T>navbar.siteName</T>&nbsp;</span><Badge color="secondary"><T>navbar.version</T></Badge> </NavbarBrand>
@@ -126,9 +134,27 @@ export default class Header extends Component {
                         </NavItem>
 
                         {!localStorage.getItem('address')? <NavItem>
-                            <Button color="primary" size="sm" onClick={() => {this.setState({isSignInOpen: true})}}> Sign in </Button>
+                            <Button className="sign-in-btn" color="link" size="lg" onClick={() => {this.setState({isSignInOpen: true})}}> Sign in </Button>
                             <LedgerModal ledger={this.props.ledger} isOpen={this.state.isSignInOpen} toggle={this.toggleSignIn.bind(this)}/>
-                        </NavItem>:<Account address={localStorage.getItem('address')}/>}
+                        </NavItem>:<NavItem id="user-acconut-icon">
+                            <span className="d-lg-none">
+                                <i className="material-icons large d-inline">account_circle</i>
+                                <Link to={`/account/${signedInAddress}`}> {signedInAddress}</Link>
+                                <Button className="float-right" color="link" size="sm" onClick={this.signOut}> Sign out </Button>
+                            </span>
+                            <span className="d-none d-lg-block">
+                                <i className="material-icons large">account_circle</i>
+                                <UncontrolledPopover className="d-none d-lg-block" trigger="legacy" placement="bottom" target="user-acconut-icon">
+                                    <PopoverBody>
+                                        <div className="ellipis">
+                                            <div>You are signed in as </div>
+                                            <Link className="user-account-link" to={`/account/${signedInAddress}`}> {signedInAddress}</Link>
+                                        </div>
+                                        <Button className="float-right" color="link" onClick={this.signOut}> Sign out </Button>
+                                    </PopoverBody>
+                                </UncontrolledPopover>
+                            </span>
+                        </NavItem>}
                     </Nav>
                 </Collapse>
             </Navbar>

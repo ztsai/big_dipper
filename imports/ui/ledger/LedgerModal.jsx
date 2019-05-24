@@ -6,73 +6,61 @@ class LedgerModal extends React.Component {
 	constructor(props){
         super(props);
         this.state = {
+        	firstConnect: true,
+        	loading: false,
         	activeTab: '1'
         };
     }
 
 	componentDidUpdate(prevProps, prevState) {
-		if (this.props.isOpen && !prevProps.isOpen && !this.state.version) {
+		if (this.props.isOpen && !prevProps.isOpen && !this.state.loading) {
 			this.tryConnect();
 		}
 	}
 
 	tryConnect() {
-		this.setState({ activeTab: '0'})
-		this.props.ledger.getCosmosAppVersion().then((res) => this.setState({
-	    		version:res,
+		let firstConnect = this.state.firstConnect;
+		if (!firstConnect){
+			this.setState({
+				loading: true,
 	    		errorMessage: '',
+			})
+		} else {
+			this.setState({ firstConnect: false})
+		}
+		this.props.ledger.getCosmosAddress().then((res) => {
+			this.setState({
+	    		address:res,
+	    		errorMessage: '',
+    			loading: false,
     			activeTab: '2'
-	    }), (err) => this.setState({
-    		errorMessage: 'there is err',
+    		});
+    		this.trySignIn();
+	    }, (err) => {
+	    	this.setState({
+    		errorMessage: firstConnect?'':err.message,
+    		loading: false,
 			activeTab: '1'
-		}));
+		})});
 	}
-
-	tryGetAddress() {
-		this.setState({ activeTab: '0'})
-		this.props.ledger.getCosmosAddress().then((res) => this.setState({
-    		address:res,
-    		errorMessage: '',
-			activeTab: '3'
-	    }), (err) => this.setState({
-    		errorMessage: 'there is err',
-			activeTab: '2'
-		}))
-	}
-
 
 	trySignIn() {
-		this.setState({ activeTab: '4'})
+		this.setState({ loading: true})
 		this.props.ledger.confirmLedgerAddress().then((res) => {
 			localStorage.setItem('address', this.state.address);
 			this.props.toggle();
-		}, (err) => this.setState({
-    		errorMessage: 'there is err',
-			activeTab: '3'
-		}))
+		}, (err) => {
+			this.setState({
+    		errorMessage: err.message,
+    		loading: false
+		})})
 	}
 
-	getOnclick() {
-		switch (this.state.activeTab) {
-			case '1':
-				return this.tryConnect.bind(this);
-			case '2':
-				return this.tryGetAddress.bind(this);
-			case '3':
-				return this.trySignIn.bind(this);
-			default:
-				return null
-		}
-	}
-
-	getButtonMessage() {
-		switch (this.state.activeTab) {
-			case '2':
-				return 'Sign In';
-			default:
-				return 'Next';
-		}
-		return '';
+	getActionButton() {
+		if (this.state.activeTab === '1')
+			return <Button color="primary"  onClick={this.tryConnect.bind(this)}>Continue</Button>
+		if (this.state.activeTab === '2' && this.state.errorMessage !== '')
+			return <Button color="primary"  onClick={this.trySignIn.bind(this)}>Retry</Button>
 	}
 
 	render() {
@@ -80,27 +68,19 @@ class LedgerModal extends React.Component {
 			<Modal isOpen={this.props.isOpen} toggle={this.props.toggle} className="ledger-sign-in">
          		<ModalHeader toggle={this.props.toggle}>Sign In With Ledger</ModalHeader>
          		<ModalBody>
-         			<p>{this.state.errorMessage}</p>
 	        		<TabContent activeTab={this.state.activeTab}>
-	        			<TabPane tabId="0">
-	        				<Spinner type="grow" color="primary" />
-	        			</TabPane>
 			        	<TabPane tabId="1">
 		    	    		Please connect your Ledger device and open Cosmos App.
 			          	</TabPane>
 						<TabPane tabId="2">
-			    	    	cosmos version {this.state.version}
-			          	</TabPane>
-						<TabPane tabId="3">
-			    	    	your address is {this.state.address}
-			          	</TabPane>
-						<TabPane tabId="4">
-			    	    	Please accept in your Ledger device.
+			    	    	To log in as {this.state.address} please accept in your Ledger device.
 			          	</TabPane>
 			        </TabContent>
+         			{this.state.loading?<Spinner type="grow" color="primary" />:''}
+         			<p className="error-message">{this.state.errorMessage}</p>
 			    </ModalBody>
         		<ModalFooter>
-            		<Button color="primary"  onClick={this.getOnclick()}>{this.getButtonMessage()}</Button>
+        			{this.getActionButton()}
             		<Button color="secondary" onClick={this.props.toggle}>Cancel</Button>
           		</ModalFooter>
         	</Modal>

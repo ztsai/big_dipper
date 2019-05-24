@@ -68,9 +68,23 @@ Meteor.methods({
                     delegations.forEach((delegation, i) => {
                         if (delegations[i] && delegations[i].shares)
                             delegations[i].shares = parseFloat(delegations[i].shares);
-                    })    
+                    })
                 }
-                
+
+                return delegations;
+            };
+        }
+        catch (e){
+            console.log(e);
+        }
+    },
+    'accounts.getDelegationForValidator'(address, validator){
+        let url = LCD + '/staking/delegators/'+address+'/delegations/'+validator;
+
+        try{
+            let delegations = HTTP.get(url);
+            if (delegations.statusCode == 200){
+                delegations = JSON.parse(delegations.content);
                 return delegations;
             };
         }
