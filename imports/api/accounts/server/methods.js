@@ -2,7 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import { HTTP } from 'meteor/http';
 
 Meteor.methods({
-    'accounts.getBalance': function(address){
+    'accounts.getBalance': function(address, availableOnly=false){
         this.unblock();
         let balance = {}
         // get available atoms
@@ -19,6 +19,9 @@ Meteor.methods({
         catch (e){
             console.log(e)
         }
+
+        if (availableOnly)
+            return balance;
 
         // get delegated amnounts
         url = LCD + '/staking/delegators/'+address+'/delegations';
