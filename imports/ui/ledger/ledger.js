@@ -11,6 +11,7 @@ import sha256 from "crypto-js/sha256"
 import ripemd160 from "crypto-js/ripemd160"
 import CryptoJS from "crypto-js"
 import _ from 'lodash';
+import CosmosDelegateTool from 'cosmos-delegation-js'
 
 // TODO: discuss TIMEOUT value
 const INTERACTION_TIMEOUT = 120000 // seconds to wait for user action on Ledger, currently is always limited to 60

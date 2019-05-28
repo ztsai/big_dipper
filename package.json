@@ -19,7 +19,7 @@
     "bip39": "^3.0.2",
     "chart.js": "^2.8.0",
     "cheerio": "^1.0.0-rc.3",
-    "cosmos-delegation-js": "git+https://github.com/ZondaX/cosmos-delegation-js.git",
+    "cosmos-delegation-js": "^0.1.0",
     "crypto-js": "^3.1.9-1",
     "d3": "^5.9.2",
     "fibers": "^3.1.1",

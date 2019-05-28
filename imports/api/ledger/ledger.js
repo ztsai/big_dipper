@@ -12,9 +12,20 @@ import secp256k1 from "secp256k1";
 import sha256 from "crypto-js/sha256"
 import ripemd160 from "crypto-js/ripemd160"
 import CryptoJS from "crypto-js"
-
+import CosmosDelegateTool from 'cosmos-delegation-js'
+import { Session } from 'meteor/session'
 
 Meteor.methods({
+    'delegation.getAccountInfo': function(delegateTool, address) {
+        let dt = new CosmosDelegateTool();
+        dt.setNodeURL(LCD);
+        return dt.getAccountInfo(address);
+    },
+    'delegation.connect': function() {
+        this.unblock();
+        let delegateTool = Session.get('delegateTool')
+        delegateTool.connect();
+    },
     'delegation.send': function(txInfo) {
         const url = `${LCD}/txs`;
         data = {

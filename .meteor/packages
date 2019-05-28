@@ -30,3 +30,4 @@ reywood:publish-composite
 jquery
 universe:i18n
 server-render
+session

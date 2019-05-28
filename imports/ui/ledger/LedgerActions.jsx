@@ -3,18 +3,26 @@ import React, { Component } from 'react';
 import { Button, Spinner, TabContent, TabPane, Row, Col, Modal, ModalHeader,
 	Form, ModalBody, ModalFooter, InputGroup, InputGroupAddon, Input } from 'reactstrap';
 import {Ledger, toPubKey} from './ledger.js';
-
+import CosmosDelegateTool from 'cosmos-delegation-js'
+import crypto from 'crypto';
+import Ripemd160 from "ripemd160";
+import bech32 from "bech32";
 
 export class LedgerButton extends Component {
 	constructor(props) {
 		super(props);
         this.state = {
         	activeTab: '2',
-        	loading: false,
+        	loading: true,
         	errorMessage: '',
         	user: localStorage.getItem('address')
         };
         this.ledger = new Ledger({testModeAllowed: false});
+        this.delegateTool = new CosmosDelegateTool();
+
+/*        Meteor.call('delegation.init',(err, res)=> {
+        	this.tryConnect();
+        });*/
         this.toggle = this.toggle.bind(this);
     }
 
@@ -33,7 +41,13 @@ export class LedgerButton extends Component {
 			if(result) {
 				let baseAccount = result.BaseVestingAccount.BaseAccount;
 				let coin = baseAccount.coins[0]
+				this.delegateTool.__proto__.getAccountInfo = (() => {
+					return {
+						accountNumber: baseAccount.account_number,
+						sequence: baseAccount.sequence,
+					}})
 				this.setState({
+					loading:false,
 					currentUser: {
 						accountNumber: baseAccount.account_number,
 						sequence: baseAccount.sequence,
@@ -45,16 +59,29 @@ export class LedgerButton extends Component {
 	}
 
 	tryConnect() {
+		this.delegateTool.connect();
+		//Meteor.call('delegation.connect');
+		/*this.delegateTool.connect().then((res) => this.setState({
+			success:true,
+	    }), (err) => this.setState({
+    		success:false,
+        	activeTab: '1'
+		}))*/
+		/*
 		this.ledger.getCosmosAddress().then((res) => this.setState({
 			success:true,
 	    }), (err) => this.setState({
     		success:false,
         	activeTab: '1'
-		}));
+		}));*/
 	}
 
 	toggle(value) {
 		this.setState({isOpen: typeof value === 'boolean'? value:!this.state.isOpen})
+	}
+
+	isLoading() {
+		return this.state.loading || this.delegateTool == null
 	}
 
 	simulate() {
@@ -77,6 +104,11 @@ export class LedgerButton extends Component {
 	}
 
 	sign() {
+		let txContext = { bech32: bech32.decode(this.state.user)}
+		let validatorBech32 = bech32.decode(this.props.validatorAddress);
+		let msg = this.delegateTool.txCreateDelegate(txContext, validatorBech32, this.state.amount, "Sent via Big Dipper");
+
+/*
 		let message = {
             "gas": this.state.gasEstimate,
             "delegatorAddress": this.state.user,
@@ -87,6 +119,7 @@ export class LedgerButton extends Component {
 			"sequence": this.state.currentUser.sequence,
 			"pubKey": localStorage.getItem('pubKey')
 		};
+
 		this.ledger.signDelegationMessage(message).then((data) => {
 			/*let data = {
 				delegatorAddress: message.delegator_address,
@@ -99,14 +132,14 @@ export class LedgerButton extends Component {
 				pubKey: localStorage.getItem('pubKey'),
 				signature: Buffer.from(res).toString('base64'),
 			}*/
-			Meteor.call('delegation.send', data, (err, res) => {
+/*			Meteor.call('delegation.send', data, (err, res) => {
 				if (err) {
 					console.log(err);
 				}
 			})
 		}, (err) => {
 			console.log(err)
-		});
+		});*/
 	}
 
 	handleInputChange(e) {
