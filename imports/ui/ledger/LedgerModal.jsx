@@ -30,7 +30,8 @@ class LedgerModal extends React.Component {
 		}
 		this.props.ledger.getCosmosAddress().then((res) => {
 			this.setState({
-	    		address:res,
+	    		address:res.address,
+	    		pubKey: res.pubKey,
 	    		errorMessage: '',
     			loading: false,
     			activeTab: '2'
@@ -48,6 +49,7 @@ class LedgerModal extends React.Component {
 		this.setState({ loading: true})
 		this.props.ledger.confirmLedgerAddress().then((res) => {
 			localStorage.setItem('address', this.state.address);
+			localStorage.setItem('pubKey', this.state.pubKey);
 			this.props.toggle();
 		}, (err) => {
 			this.setState({

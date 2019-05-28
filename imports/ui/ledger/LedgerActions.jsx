@@ -1,7 +1,8 @@
+import Cosmos from "@lunie/cosmos-js"
 import React, { Component } from 'react';
 import { Button, Spinner, TabContent, TabPane, Row, Col, Modal, ModalHeader,
 	Form, ModalBody, ModalFooter, InputGroup, InputGroupAddon, Input } from 'reactstrap';
-import {Ledger} from './ledger.js';
+import {Ledger, toPubKey} from './ledger.js';
 
 
 export class LedgerButton extends Component {
@@ -28,13 +29,18 @@ export class LedgerButton extends Component {
 	}
 
 	getBalance() {
-		Meteor.call('accounts.getBalance', this.state.user, true, (error, result) => {
-			if(result)
+		Meteor.call('accounts.getAccountDetail', this.state.user, (error, result) => {
+			if(result) {
+				let baseAccount = result.BaseVestingAccount.BaseAccount;
+				let coin = baseAccount.coins[0]
 				this.setState({
-					userAvailable: {
-						amount:parseFloat(result.available.amount),
-						denom: result.available.denom
+					currentUser: {
+						accountNumber: baseAccount.account_number,
+						sequence: baseAccount.sequence,
+						availableAmount:parseFloat(coin.amount),
+						denom: coin.denom
 					}})
+			}
 		})
 	}
 
@@ -71,28 +77,36 @@ export class LedgerButton extends Component {
 	}
 
 	sign() {
-		let message = [{
-            "base_req": {
-                "from": this.state.user,
-                "memo": "Sent via BD",
-                "chain_id": Meteor.settings.public.chainId,
-                "gas": this.state.gasEstimate,
-                "gas_adjustment": "1.2",
-                "simulate": true
-            },
-            "delegator_address": this.state.user,
-            "validator_address": this.validatorAddress,
-            "amount": {
-                "denom": Meteor.settings.public.stakingDenom,
-                "amount": this.state.amount
-            }
-		}];
-		this.ledger.sign(message).then((res) => {
-			console.log(res)
+		let message = {
+            "gas": this.state.gasEstimate,
+            "delegatorAddress": this.state.user,
+            "validatorAddress": this.props.validatorAddress,
+            "denom": Meteor.settings.public.stakingDenom,
+            "amount": this.state.amount,
+            "accountNumber": this.state.currentUser.accountNumber,
+			"sequence": this.state.currentUser.sequence,
+			"pubKey": localStorage.getItem('pubKey')
+		};
+		this.ledger.signDelegationMessage(message).then((data) => {
+			/*let data = {
+				delegatorAddress: message.delegator_address,
+				validatorAddress: message.validator_address,
+				denom: message.denom,
+				amount: message.amount,
+				gas: message.gas,
+            	accountNumber: this.state.currentUser.accountNumber,
+				sequence: this.state.currentUser.sequence,
+				pubKey: localStorage.getItem('pubKey'),
+				signature: Buffer.from(res).toString('base64'),
+			}*/
+			Meteor.call('delegation.send', data, (err, res) => {
+				if (err) {
+					console.log(err);
+				}
+			})
 		}, (err) => {
 			console.log(err)
-		})
-
+		});
 	}
 
 	handleInputChange(e) {
@@ -126,10 +140,10 @@ export class LedgerButton extends Component {
 			    	    	Delegate to {this.props.validatorAddress}
 
 					     	<InputGroup>
-					        	<Input name="delegateAmount" onChange={this.handleInputChange.bind(this)} placeholder="Amount" min={0} max={this.state.userAvailable?this.state.userAvailable.amount:null} type="number" step="1" />
+					        	<Input name="delegateAmount" onChange={this.handleInputChange.bind(this)} placeholder="Amount" min={0} max={this.state.currentUser?this.state.currentUser.availableAmount:null} type="number" step="1" />
 					        	<InputGroupAddon addonType="append">{Meteor.settings.public.stakingDenom}</InputGroupAddon>
 					      	</InputGroup>
-					      	your available balance: {this.state.userAvailable?this.state.userAvailable.amount:''} {this.state.userAvailable?this.state.userAvailable.denom:''}
+					      	your available balance: {this.state.currentUser?this.state.currentUser.availableAmount:''} {this.state.currentUser?this.state.currentUser.denom:''}
 			          	</TabPane>
 						<TabPane tabId="3">
 			    	    	You are going to delegate {this.state.amount} to {this.props.validatorAddress} with {this.state.gasEstimate} as fee

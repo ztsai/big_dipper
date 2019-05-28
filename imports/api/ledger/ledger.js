@@ -15,6 +15,48 @@ import CryptoJS from "crypto-js"
 
 
 Meteor.methods({
+    'delegation.send': function(txInfo) {
+        const url = `${LCD}/txs`;
+        data = {
+            "tx": {
+                "msg": txInfo.msgs,
+                "fee": txInfo.fee,
+                "memo": txInfo.memo,
+                "signatures": txInfo.msgs[0].signatures
+            },
+
+                    /*"msg": [{
+                        "type": "cosmos-sdk/MsgDelegate",
+                        "value": {
+                            "delegator_address": txInfo.delegatorAddress,
+                            "validator_address": txInfo.validatorAddress,
+                            "amount": {
+                                "denom": txInfo.denom,
+                                "amount": txInfo.amount}}}],
+                    "fee": {
+                      "gas": txInfo.gas
+                    },
+                    "signatures": [
+                      {
+                        "pub_key": {
+                          "type": "tendermint/PubKeySecp256k1",
+                          "value": txInfo.pubKey
+                        },
+                        "account_number": txInfo.accountNumber,
+                        "sequence": txInfo.sequence,
+                        "signature": txInfo.signature
+                      }
+                    ],
+                    "memo": "Sent via Big Dipper"
+                }},*/
+            "mode": "block"
+        };
+        console.log(JSON.stringify(data))
+        let response = HTTP.post(url, {data});
+        if (response.statusCode == 200) {
+            return true;
+        }
+    },
     'delegation.simulate': function(delegator_address, validator_address, amount) {
         const url = `${LCD}/staking/delegators/${delegator_address}/delegations`;
         data = {
