@@ -26,6 +26,18 @@ Meteor.methods({
         let delegateTool = Session.get('delegateTool')
         delegateTool.connect();
     },
+    'transaction.submit': function(txInfo) {
+        const url = `${LCD}/txs`;
+        data = {
+            "tx": txInfo.value,
+            "mode": "sync"
+        }
+        console.log(JSON.stringify(data))
+        let response = HTTP.post(url, {data});
+        if (response.statusCode == 200) {
+            return true;
+        }
+    },
     'delegation.send': function(txInfo) {
         const url = `${LCD}/txs`;
         data = {

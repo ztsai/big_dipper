@@ -16,6 +16,10 @@ import CosmosDelegateTool from 'cosmos-delegation-js'
 // TODO: discuss TIMEOUT value
 const INTERACTION_TIMEOUT = 120000 // seconds to wait for user action on Ledger, currently is always limited to 60
 const REQUIRED_COSMOS_APP_VERSION = "1.5.0"
+const DEFAULT_MEMO = 'Sent via Big Dipper'
+const DEFAULT_DENOM = 'uatom';
+const DEFAULT_GAS = 200000;
+const DEFAULT_GAS_PRICE = 0.025;
 
 /*
 HD wallet derivation path (BIP44)
@@ -234,4 +238,224 @@ export const checkAppMode = (testModeAllowed, testMode) => {
             `DANGER: The Cosmos Ledger app is in test mode and shouldn't be used on mainnet!`
         )
     }
+}
+
+
+
+
+
+
+
+
+export function canonicalizeJson(jsonTx) {
+    if (Array.isArray(jsonTx)) {
+        return jsonTx.map(canonicalizeJson);
+    }
+    if (typeof jsonTx !== 'object') {
+        return jsonTx;
+    }
+    const tmp = {};
+    Object.keys(jsonTx).sort().forEach((key) => {
+        // eslint-disable-next-line no-unused-expressions
+        jsonTx[key] != null && (tmp[key] = jsonTx[key]);
+    });
+
+    return tmp;
+}
+
+export function getBytesToSign(tx, txContext) {
+    if (typeof txContext === 'undefined') {
+        throw new Error('txContext is not defined');
+    }
+    if (typeof txContext.chainId === 'undefined') {
+        throw new Error('txContext does not contain the chainId');
+    }
+    if (typeof txContext.accountNumber === 'undefined') {
+        throw new Error('txContext does not contain the accountNumber');
+    }
+    if (typeof txContext.sequence === 'undefined') {
+        throw new Error('txContext does not contain the sequence value');
+    }
+
+    const txFieldsToSign = {
+        account_number: txContext.accountNumber.toString(),
+        chain_id: txContext.chainId,
+        fee: tx.value.fee,
+        memo: tx.value.memo,
+        msgs: tx.value.msg,
+        sequence: txContext.sequence.toString(),
+    };
+
+    return JSON.stringify(canonicalizeJson(txFieldsToSign));
+}
+
+export function applyGas(unsignedTx, gas) {
+    if (typeof unsignedTx === 'undefined') {
+        throw new Error('undefined unsignedTx');
+    }
+    if (typeof gas === 'undefined') {
+        throw new Error('undefined gas');
+    }
+
+    // eslint-disable-next-line no-param-reassign
+    unsignedTx.value.fee = {
+        // amount: [{
+        //     amount: (gas * DEFAULT_GAS_PRICE).toString(),
+        //     denom: DEFAULT_DENOM,
+        // }],
+        amount: [],
+        gas: gas.toString(),
+    };
+
+    return unsignedTx;
+}
+
+// Creates a new tx skeleton
+export function createSkeleton(txContext) {
+    if (typeof txContext === 'undefined') {
+        throw new Error('undefined txContext');
+    }
+    if (typeof txContext.accountNumber === 'undefined') {
+        throw new Error('txContext does not contain the accountNumber');
+    }
+    if (typeof txContext.sequence === 'undefined') {
+        throw new Error('txContext does not contain the sequence value');
+    }
+    const txSkeleton = {
+        type: 'auth/StdTx',
+        value: {
+            msg: [], // messages
+            fee: '',
+            memo: txContext.memo || DEFAULT_MEMO,
+            signatures: [{
+                signature: 'N/A',
+                account_number: txContext.accountNumber.toString(),
+                sequence: txContext.sequence.toString(),
+                pub_key: {
+                    type: 'tendermint/PubKeySecp256k1',
+                    value: txContext.pk || 'PK',
+                },
+            }],
+        },
+    };
+    return applyGas(txSkeleton, DEFAULT_GAS);
+}
+
+export function applySignature(unsignedTx, txContext, secp256k1Sig) {
+    if (typeof unsignedTx === 'undefined') {
+        throw new Error('undefined unsignedTx');
+    }
+    if (typeof txContext === 'undefined') {
+        throw new Error('undefined txContext');
+    }
+    if (typeof txContext.pk === 'undefined') {
+        throw new Error('txContext does not contain the public key (pk)');
+    }
+    if (typeof txContext.accountNumber === 'undefined') {
+        throw new Error('txContext does not contain the accountNumber');
+    }
+    if (typeof txContext.sequence === 'undefined') {
+        throw new Error('txContext does not contain the sequence value');
+    }
+
+    const tmpCopy = Object.assign({}, unsignedTx, {});
+
+    tmpCopy.value.signatures = [
+        {
+            signature: secp256k1Sig.toString('base64'),
+            account_number: txContext.accountNumber.toString(),
+            sequence: txContext.sequence.toString(),
+            pub_key: {
+                type: 'tendermint/PubKeySecp256k1',
+                value: txContext.pk//Buffer.from(txContext.pk, 'hex').toString('base64'),
+            },
+        },
+    ];
+    return tmpCopy;
+}
+
+// Creates a new delegation tx based on the input parameters
+// the function expects a complete txContext
+export function createDelegate(
+    txContext,
+    validatorBech32,
+    uatomAmount,
+    memo,
+) {
+    const txSkeleton = createSkeleton(txContext);
+
+    const txMsg = {
+        type: 'cosmos-sdk/MsgDelegate',
+        value: {
+            amount: {
+                amount: uatomAmount.toString(),
+                denom: txContext.denom,
+            },
+            delegator_address: txContext.bech32,
+            validator_address: validatorBech32,
+        },
+    };
+
+    txSkeleton.value.msg = [txMsg];
+    txSkeleton.value.memo = memo || '';
+
+    return txSkeleton;
+}
+
+// Creates a new undelegation tx based on the input parameters
+// the function expects a complete txContext
+export function createUndelegate(
+    txContext,
+    validatorBech32,
+    uatomAmount,
+    memo,
+) {
+    const txSkeleton = createSkeleton(txContext);
+
+    const txMsg = {
+        type: 'cosmos-sdk/MsgUndelegate',
+        value: {
+            amount: {
+                amount: uatomAmount.toString(),
+                denom: DEFAULT_DENOM,
+            },
+            delegator_address: txContext.bech32,
+            validator_address: validatorBech32,
+        },
+    };
+
+    txSkeleton.value.msg = [txMsg];
+    txSkeleton.value.memo = memo || '';
+
+    return txSkeleton;
+}
+
+// Creates a new redelegation tx based on the input parameters
+// the function expects a complete txContext
+export function createRedelegate(
+    txContext,
+    validatorSourceBech32,
+    validatorDestBech32,
+    uatomAmount,
+    memo,
+) {
+    const txSkeleton = createSkeleton(txContext);
+
+    const txMsg = {
+        type: 'cosmos-sdk/MsgBeginRedelegate',
+        value: {
+            amount: {
+                amount: uatomAmount.toString(),
+                denom: DEFAULT_DENOM,
+            },
+            delegator_address: txContext.bech32,
+            validator_dst_address: validatorDestBech32,
+            validator_src_address: validatorSourceBech32,
+        },
+    };
+
+    txSkeleton.value.msg = [txMsg];
+    txSkeleton.value.memo = memo || '';
+
+    return txSkeleton;
 }

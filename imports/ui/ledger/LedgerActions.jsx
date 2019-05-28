@@ -2,12 +2,11 @@ import Cosmos from "@lunie/cosmos-js"
 import React, { Component } from 'react';
 import { Button, Spinner, TabContent, TabPane, Row, Col, Modal, ModalHeader,
 	Form, ModalBody, ModalFooter, InputGroup, InputGroupAddon, Input } from 'reactstrap';
-import {Ledger, toPubKey} from './ledger.js';
+import {Ledger, toPubKey, createSkeleton, createDelegate, applyGas, getBytesToSign, applySignature} from './ledger.js';
 import CosmosDelegateTool from 'cosmos-delegation-js'
 import crypto from 'crypto';
 import Ripemd160 from "ripemd160";
 import bech32 from "bech32";
-
 export class LedgerButton extends Component {
 	constructor(props) {
 		super(props);
@@ -18,11 +17,6 @@ export class LedgerButton extends Component {
         	user: localStorage.getItem('address')
         };
         this.ledger = new Ledger({testModeAllowed: false});
-        this.delegateTool = new CosmosDelegateTool();
-
-/*        Meteor.call('delegation.init',(err, res)=> {
-        	this.tryConnect();
-        });*/
         this.toggle = this.toggle.bind(this);
     }
 
@@ -41,11 +35,6 @@ export class LedgerButton extends Component {
 			if(result) {
 				let baseAccount = result.BaseVestingAccount.BaseAccount;
 				let coin = baseAccount.coins[0]
-				this.delegateTool.__proto__.getAccountInfo = (() => {
-					return {
-						accountNumber: baseAccount.account_number,
-						sequence: baseAccount.sequence,
-					}})
 				this.setState({
 					loading:false,
 					currentUser: {
@@ -59,21 +48,12 @@ export class LedgerButton extends Component {
 	}
 
 	tryConnect() {
-		this.delegateTool.connect();
-		//Meteor.call('delegation.connect');
-		/*this.delegateTool.connect().then((res) => this.setState({
-			success:true,
-	    }), (err) => this.setState({
-    		success:false,
-        	activeTab: '1'
-		}))*/
-		/*
 		this.ledger.getCosmosAddress().then((res) => this.setState({
 			success:true,
 	    }), (err) => this.setState({
     		success:false,
         	activeTab: '1'
-		}));*/
+		}));
 	}
 
 	toggle(value) {
@@ -86,15 +66,28 @@ export class LedgerButton extends Component {
 
 	simulate() {
 		this.setState({loading: true})
+
+		let txContext = {
+			chainId: Meteor.settings.public.chainId,
+			bech32: /*bech32.decode(*/this.state.user/*)*/,
+            accountNumber: this.state.currentUser.accountNumber,
+			sequence: this.state.currentUser.sequence,
+			denom: Meteor.settings.public.stakingDenom,
+	        pk: localStorage.getItem('pubKey'),
+		}
+		let validatorBech32 = /*bech32.decode(*/this.props.validatorAddress/*)*/;
 		let amount = this.state.delegateAmount;
+		this.delegateMsg = createDelegate(txContext, validatorBech32, amount, "Sent via Big Dipper")
 		Meteor.call('delegation.simulate', this.state.user, this.props.validatorAddress, amount, (err, res) =>{
-			if (res)
+			if (res){
 				this.setState({
 					gasEstimate: res,
 					amount: amount,
 					activeTab: '3',
 					loading: false
 				})
+				applyGas(this.delegateMsg, res);
+			}
 			else
 				this.setState({
 					loading: false,
@@ -104,10 +97,26 @@ export class LedgerButton extends Component {
 	}
 
 	sign() {
-		let txContext = { bech32: bech32.decode(this.state.user)}
+		const txContext = {
+	        chainId: Meteor.settings.public.chainId,
+	        path: [44, 118, 0, 0, 0],
+	        pk: localStorage.getItem('pubKey'),
+            accountNumber: this.state.currentUser.accountNumber,
+			sequence: this.state.currentUser.sequence,
+	    };
+	    const bytesToSign = getBytesToSign(this.delegateMsg, txContext);
+	    this.ledger.sign(bytesToSign).then((sig) => {
+    		applySignature(this.delegateMsg, txContext, sig);
+    		Meteor.call('transaction.submit', this.delegateMsg, (err, res) => {
+				if (err) {
+					console.log(err);
+				}
+			})
+	    })
+		/*let txContext = { bech32: bech32.decode(this.state.user)}
 		let validatorBech32 = bech32.decode(this.props.validatorAddress);
 		let msg = this.delegateTool.txCreateDelegate(txContext, validatorBech32, this.state.amount, "Sent via Big Dipper");
-
+*/
 /*
 		let message = {
             "gas": this.state.gasEstimate,
